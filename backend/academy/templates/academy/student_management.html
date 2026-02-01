@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학원 관리 시스템</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+    <!-- Navbar -->
+    <nav class="bg-indigo-600 text-white h-14 flex items-center px-4 justify-between shadow-md shrink-0 z-10">
+        <div class="font-bold text-lg flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                </path>
+            </svg>
+            학원 관리 시스템
+        </div>
+        <div class="text-sm opacity-80">v2.1 (Django+Tailwind)</div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Sidebar (Left) -->
+        <div class="w-80 bg-white border-r border-gray-200 flex flex-col shadow-sm z-0">
+            <!-- Search Area -->
+            <div class="p-4 border-b border-gray-100 bg-gray-50/50">
+                <form method="GET" action="{% url 'student_management' %}" class="flex gap-2">
+                    <input type="text" name="q" value="{{ query }}" placeholder="이름 검색..."
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition shadow-sm">
+                    <button type="submit"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">검색</button>
+                </form>
+            </div>
+
+            <!-- Student List -->
+            <div class="flex-1 overflow-y-auto no-scrollbar">
+                {% for student in students %}
+                <a href="?id={{ student.id }}{% if query %}&q={{ query }}{% endif %}"
+                    class="block p-4 border-b border-gray-50 hover:bg-indigo-50 transition cursor-pointer group {% if selected_student.id == student.id %}bg-indigo-50 border-r-4 border-r-indigo-600{% endif %}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-gray-800 group-hover:text-indigo-700">{{ student.name }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ student.school|default:"학교정보없음" }}</div>
+                        </div>
+                        <span
+                            class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                            {% if student.status == 'active' %}bg-green-100 text-green-700{% elif student.status == 'on_leave' %}bg-amber-100 text-amber-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ student.get_status_display }}
+                        </span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="p-8 text-center text-gray-400 text-sm">
+                    검색된 학생이 없습니다.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Detail Area (Right) -->
+        <div class="flex-1 bg-gray-50 flex flex-col overflow-y-auto">
+            {% if messages %}
+            <div class="p-4">
+                {% for message in messages %}
+                <div class="p-4 mb-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800"
+                    role="alert">
+                    <span class="font-medium">알림:</span> {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="POST" class="flex-1 flex flex-col max-w-5xl mx-auto w-full p-6 gap-6">
+                {% csrf_token %}
+                {% if selected_student %}<input type="hidden" name="id" value="{{ selected_student.id }}">{% endif %}
+
+                <!-- Toolbar -->
+                <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex gap-2">
+                        <a href="{% url 'student_management' %}"
+                            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 transition">📝
+                            신규</a>
+                        <button type="button" onclick="alert('준비중입니다.')"
+                            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 transition">🖨️
+                            출력</button>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <button type="button"
+                            class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
+                            </svg>
+                            Excel
+                        </button>
+                        <div class="h-6 w-px bg-gray-300 mx-2"></div>
+                        <button type="submit"
+                            class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-md">
+                            💾 저장
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Grid -->
+                <div class="grid grid-cols-12 gap-6">
+
+                    <!-- Left Column: Photo & Basic Info -->
+                    <div class="col-span-12 md:col-span-3 flex flex-col gap-4">
+                        <!-- Photo Upload -->
+                        <div
+                            class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col items-center gap-4">
+                            <div
+                                class="w-36 h-36 bg-gray-100 rounded-full border-4 border-white shadow-lg overflow-hidden flex items-center justify-center text-gray-300">
+                                {% if selected_student.photo %}
+                                <img src="{{ selected_student.photo.url }}" class="w-full h-full object-cover">
+                                {% else %}
+                                <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                                {% endif %}
+                            </div>
+                            <div class="flex gap-2">
+                                <label
+                                    class="cursor-pointer bg-indigo-50 text-indigo-600 px-3 py-1 rounded-md text-xs font-bold hover:bg-indigo-100 transition">
+                                    업로드
+                                    <input type="file" class="hidden">
+                                </label>
+                                <button type="button"
+                                    class="bg-red-50 text-red-600 px-3 py-1 rounded-md text-xs font-bold hover:bg-red-100 transition">삭제</button>
+                            </div>
+                        </div>
+
+                        <!-- Status Card -->
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">원생 상태</label>
+                            <select name="status"
+                                class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="active" {% if selected_student.status=='active' %}selected{% endif %}>🟢
+                                    재원생</option>
+                                <option value="on_leave" {% if selected_student.status=='on_leave' %}selected{% endif
+                                    %}>🟡 휴원</option>
+                                <option value="suspended" {% if selected_student.status=='suspended' %}selected{% endif
+                                    %}>🟠 일시정지</option>
+                                <option value="withdrawn" {% if selected_student.status=='withdrawn' %}selected{% endif
+                                    %}>🔴 퇴원</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Detail Inputs -->
+                    <div class="col-span-12 md:col-span-9 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-800 mb-6 border-b border-gray-100 pb-2">학생 상세 정보</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Student Info -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">학생명 <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="name" value="{{ selected_student.name|default:'' }}" required
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">출결코드 (4-6자리)</label>
+                                <input type="text" name="attendance_code"
+                                    value="{{ selected_student.attendance_code|default:'' }}"
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-yellow-50/50">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">학생 연락처 (ID)</label>
+                                <input type="text" name="phone_number"
+                                    value="{{ selected_student.phone_number|default:'' }}" required
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <!-- Parent Info -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">학부모 성함</label>
+                                <input type="text" name="parent_name"
+                                    value="{{ selected_student.parent_name|default:'' }}"
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">학부모 연락처 <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="parent_phone_number"
+                                    value="{{ selected_student.parent_phone_number|default:'' }}" required
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">담당 선생님</label>
+                                <input type="text" name="manager_name"
+                                    value="{{ selected_student.manager_name|default:'' }}"
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <!-- Academic Info -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">학교명</label>
+                                <input type="text" name="school" value="{{ selected_student.school|default:'' }}"
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">성별</label>
+                                <div class="flex gap-2">
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="gender" value="M" class="peer hidden" {% if
+                                            selected_student.gender=='M' %}checked{% endif %}>
+                                        <div
+                                            class="text-center px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm peer-checked:bg-blue-100 peer-checked:text-blue-700 peer-checked:border-blue-300 font-bold transition">
+                                            남성</div>
+                                    </label>
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="gender" value="F" class="peer hidden" {% if
+                                            selected_student.gender=='F' %}checked{% endif %}>
+                                        <div
+                                            class="text-center px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm peer-checked:bg-pink-100 peer-checked:text-pink-700 peer-checked:border-pink-300 font-bold transition">
+                                            여성</div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">납입일 (매월)</label>
+                                <div class="relative">
+                                    <input type="number" name="payment_day"
+                                        value="{{ selected_student.payment_day|default:25 }}"
+                                        class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <span class="absolute right-3 top-2 text-sm text-gray-400">일</span>
+                                </div>
+                            </div>
+
+                            <!-- Address -->
+                            <div class="col-span-1 md:col-span-2 space-y-1">
+                                <label class="text-xs font-bold text-gray-400">주소</label>
+                                <div class="flex gap-2">
+                                    <input type="text" name="address" value="{{ selected_student.address|default:'' }}"
+                                        placeholder="기본 주소"
+                                        class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    <button type="button"
+                                        class="bg-gray-200 text-gray-600 px-3 rounded-lg text-xs font-bold hover:bg-gray-300">검색</button>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">상세 주소</label>
+                                <input type="text" name="detail_address"
+                                    value="{{ selected_student.detail_address|default:'' }}"
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <!-- Dates -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-400">등록일</label>
+                                <input type="date" name="enrollment_date"
+                                    value="{{ selected_student.enrollment_date|date:'Y-m-d'|default:'' }}"
+                                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Widgets -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                    <!-- Memo Widget -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                        <h4 class="font-bold text-gray-800 mb-4 flex items-center justify-between">
+                            상담/특이사항 메모
+                            <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">최근 3건</span>
+                        </h4>
+                        <div class="space-y-3">
+                            {% if selected_student.memo %}
+                            <div class="flex gap-3 items-start p-3 bg-yellow-50/50 rounded-xl border border-yellow-100">
+                                <span class="text-xs font-bold text-yellow-600 mt-0.5">고정</span>
+                                <p class="text-sm text-gray-700 leading-relaxed">{{ selected_student.memo }}</p>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-8 text-gray-400 text-sm">등록된 메모가 없습니다.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Calendar Widget (Visual Only for MVP) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                        <h4 class="font-bold text-gray-800 mb-4 flex items-center justify-between">
+                            출석 현황
+                            <div class="flex gap-2 text-xs">
+                                <button type="button" class="text-gray-400 hover:text-gray-600">&lt;</button>
+                                <span class="font-bold">2026년 2월</span>
+                                <button type="button" class="text-gray-400 hover:text-gray-600">&gt;</button>
+                            </div>
+                        </h4>
+                        <div class="grid grid-cols-7 text-center text-xs text-gray-400 mb-2">
+                            <div>일</div>
+                            <div>월</div>
+                            <div>화</div>
+                            <div>수</div>
+                            <div>목</div>
+                            <div>금</div>
+                            <div>토</div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 flex-1">
+                            <!-- Placeholder Calendar Days -->
+                            <div
+                                class="aspect-square flex items-center justify-center text-gray-300 text-xs text-opacity-50">
+                                28</div>
+                            <div
+                                class="aspect-square flex items-center justify-center text-gray-300 text-xs text-opacity-50">
+                                29</div>
+                            <div
+                                class="aspect-square flex items-center justify-center text-gray-300 text-xs text-opacity-50">
+                                30</div>
+                            <div
+                                class="aspect-square flex items-center justify-center text-gray-300 text-xs text-opacity-50">
+                                31</div>
+                            <div
+                                class="aspect-square flex items-center justify-center text-sm font-bold rounded-full hover:bg-gray-100 cursor-pointer">
+                                1</div>
+                            <div
+                                class="aspect-square flex items-center justify-center text-sm font-bold rounded-full hover:bg-gray-100 cursor-pointer">
+                                2</div>
+                            <div
+                                class="aspect-square flex items-center justify-center text-sm font-bold rounded-full hover:bg-gray-100 cursor-pointer">
+                                3</div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

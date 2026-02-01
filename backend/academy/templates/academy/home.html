@@ -1,0 +1,515 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}홈 - 학원 관리 시스템{% endblock %}
+
+{% block extra_head %}
+<style>
+    .calendar-day-active {
+        background-color: rgba(79, 70, 229, 0.05);
+    }
+
+    .calendar-day-today {
+        border: 2px solid #4f46e5 !important;
+    }
+
+    .event-indigo {
+        background-color: #e0e7ff;
+        color: #4338ca;
+        border-left: 3px solid #4f46e5;
+    }
+
+    .event-emerald {
+        background-color: #d1fae5;
+        color: #065f46;
+        border-left: 3px solid #10b981;
+    }
+
+    .event-rose {
+        background-color: #ffe4e6;
+        color: #9f1239;
+        border-left: 3px solid #f43f5e;
+    }
+
+    .event-amber {
+        background-color: #fef3c7;
+        color: #92400e;
+        border-left: 3px solid #f59e0b;
+    }
+
+    .event-blue {
+        background-color: #dbeafe;
+        color: #1e40af;
+        border-left: 3px solid #3b82f6;
+    }
+
+    .event-pink {
+        background-color: #fce7f3;
+        color: #9d174d;
+        border-left: 3px solid #ec4899;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 p-8 overflow-y-auto bg-gray-50" id="calendarApp">
+    <div class="max-w-6xl mx-auto space-y-8">
+        <!-- Dashboard Header -->
+        <div class="flex justify-between items-end">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">일정 관리</h1>
+                <p class="text-gray-500">학원의 전체 일정을 한눈에 확인하고 관리하세요.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openAddModal()"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    일정 추가
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Access Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <a href="{% url 'attendance_management' %}"
+                class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-green-50 rounded-2xl text-green-600 group-hover:scale-110 transition">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-lg">출결 관리</div>
+                        <p class="text-sm text-gray-400">학생들의 오늘 출석 체크</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'student_management' %}"
+                class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-indigo-50 rounded-2xl text-indigo-600 group-hover:scale-110 transition">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-lg">원생 관리</div>
+                        <p class="text-sm text-gray-400">신규 등록 및 정보 수정</p>
+                    </div>
+                </div>
+            </a>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition group cursor-pointer"
+                onclick="openAddModal()">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-rose-50 rounded-2xl text-rose-600 group-hover:scale-110 transition">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-lg">일정 추가</div>
+                        <p class="text-sm text-gray-400">새로운 학원 일정 등록</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <!-- Calendar Header -->
+            <div class="p-6 flex items-center justify-between border-b border-gray-50">
+                <div class="flex items-center gap-4">
+                    <h2 id="currentMonthYear" class="text-xl font-bold text-gray-800">2026년 2월</h2>
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button onclick="changeMonth(-1)"
+                            class="p-1 hover:bg-white rounded-md transition text-gray-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <button onclick="changeMonth(1)" class="p-1 hover:bg-white rounded-md transition text-gray-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="goToday()"
+                        class="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg border border-gray-100">오늘</button>
+                </div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="grid grid-cols-7" id="calendarWeekdays">
+                <div
+                    class="p-4 text-center text-xs font-bold text-rose-500 uppercase tracking-wider border-r border-gray-50">
+                    일</div>
+                <div
+                    class="p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider border-r border-gray-50">
+                    월</div>
+                <div
+                    class="p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider border-r border-gray-50">
+                    화</div>
+                <div
+                    class="p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider border-r border-gray-50">
+                    수</div>
+                <div
+                    class="p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider border-r border-gray-50">
+                    목</div>
+                <div
+                    class="p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider border-r border-gray-50">
+                    금</div>
+                <div class="p-4 text-center text-xs font-bold text-blue-500 uppercase tracking-wider">토</div>
+            </div>
+
+            <div class="grid grid-cols-7 border-t border-gray-50" id="calendarDays">
+                <!-- Days will be generated by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Event Modal -->
+<div id="eventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+            <h3 id="modalTitle" class="text-lg font-bold text-gray-800">일정 추가</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <form id="eventForm" class="p-6 space-y-4">
+            <input type="hidden" id="eventId">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">일정 제목</label>
+                <input type="text" id="eventTitleInput" required
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">날짜</label>
+                <input type="date" id="eventDateInput" required
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">색상</label>
+                <div class="flex gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="color" value="indigo" checked class="peer hidden">
+                        <div
+                            class="w-8 h-8 rounded-full bg-indigo-500 peer-checked:ring-2 ring-offset-2 ring-indigo-500">
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="color" value="emerald" class="peer hidden">
+                        <div
+                            class="w-8 h-8 rounded-full bg-emerald-500 peer-checked:ring-2 ring-offset-2 ring-emerald-500">
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="color" value="rose" class="peer hidden">
+                        <div class="w-8 h-8 rounded-full bg-rose-500 peer-checked:ring-2 ring-offset-2 ring-rose-500">
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="color" value="amber" class="peer hidden">
+                        <div class="w-8 h-8 rounded-full bg-amber-500 peer-checked:ring-2 ring-offset-2 ring-amber-500">
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="color" value="blue" class="peer hidden">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 peer-checked:ring-2 ring-offset-2 ring-blue-500">
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">내용</label>
+                <textarea id="eventDescriptionInput" rows="3"
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+            </div>
+            <div class="pt-4 flex gap-2">
+                <button type="button" id="deleteBtn" onclick="deleteEvent()"
+                    class="hidden flex-1 bg-gray-100 text-red-600 font-bold py-2 rounded-lg hover:bg-red-50 transition">삭제</button>
+                <button type="submit"
+                    class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View Day Events Modal -->
+<div id="dayModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-indigo-600 text-white">
+            <h3 id="dayModalTitle" class="text-lg font-bold">2026년 2월 2일 일정</h3>
+            <button onclick="closeDayModal()" class="text-white/80 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div id="dayEventsList" class="p-6 space-y-3 max-h-[400px] overflow-y-auto">
+            <!-- Events list will be generated by JS -->
+        </div>
+        <div class="p-4 bg-gray-50 border-t border-gray-100">
+            <button onclick="openAddModalWithDate()"
+                class="w-full py-2 bg-white border border-gray-200 text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition">일정
+                추가하기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentDate = new Date();
+    let events = [];
+    let selectedDate = null;
+
+    async function fetchEvents() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth(); // 0-indexed
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+
+        const res = await fetch(`/api/schedules/?start=${startStr}&end=${endStr}`);
+        events = await res.json();
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        document.getElementById('currentMonthYear').textContent = `${year}년 ${month + 1}월`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+        const prevMonthLastDate = new Date(year, month, 0).getDate();
+
+        const calendarDays = document.getElementById('calendarDays');
+        calendarDays.innerHTML = '';
+
+        // Prev Month Days
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const dayDiv = createDayDiv(prevMonthLastDate - i, true);
+            calendarDays.appendChild(dayDiv);
+        }
+
+        // Current Month Days
+        const today = new Date();
+        for (let i = 1; i <= lastDate; i++) {
+            const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === i;
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const dayEvents = events.filter(e => e.start_date === dateStr);
+            const dayDiv = createDayDiv(i, false, isToday, dateStr, dayEvents);
+            calendarDays.appendChild(dayDiv);
+        }
+
+        // Next Month Days
+        const remainingCells = 42 - (firstDay + lastDate);
+        for (let i = 1; i <= remainingCells; i++) {
+            const dayDiv = createDayDiv(i, true);
+            calendarDays.appendChild(dayDiv);
+        }
+    }
+
+    function createDayDiv(day, isOtherMonth, isToday = false, dateStr = '', dayEvents = []) {
+        const div = document.createElement('div');
+        div.className = `min-h-[120px] p-2 border-r border-b border-gray-50 transition cursor-pointer relative ${isOtherMonth ? 'bg-gray-50/50 text-gray-300' : 'hover:bg-indigo-50/30'}`;
+        if (isToday) div.classList.add('calendar-day-today');
+
+        const daySpan = document.createElement('span');
+        daySpan.className = `text-sm font-bold ${isOtherMonth ? 'text-gray-300' : 'text-gray-700'}`;
+        daySpan.textContent = day;
+        div.appendChild(daySpan);
+
+        if (!isOtherMonth) {
+            div.onclick = () => openDayModal(dateStr, dayEvents);
+
+            const eventContainer = document.createElement('div');
+            eventContainer.className = 'mt-1 space-y-1 overflow-hidden';
+            dayEvents.slice(0, 3).forEach(event => {
+                const eDiv = document.createElement('div');
+                eDiv.className = `event-${event.color} text-[10px] p-1 rounded font-bold truncate`;
+                eDiv.textContent = event.title;
+                eDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    openEditModal(event);
+                };
+                eventContainer.appendChild(eDiv);
+            });
+            if (dayEvents.length > 3) {
+                const more = document.createElement('div');
+                more.className = 'text-[9px] text-gray-400 font-bold pl-1';
+                more.textContent = `+ ${dayEvents.length - 3}개 더보기`;
+                eventContainer.appendChild(more);
+            }
+            div.appendChild(eventContainer);
+        }
+
+        return div;
+    }
+
+    function changeMonth(delta) {
+        currentDate.setMonth(currentDate.getMonth() + delta);
+        fetchEvents();
+    }
+
+    function goToday() {
+        currentDate = new Date();
+        fetchEvents();
+    }
+
+    // Modal logic
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = '일정 추가';
+        document.getElementById('eventId').value = '';
+        document.getElementById('eventForm').reset();
+        document.getElementById('eventDateInput').value = new Date().toISOString().split('T')[0];
+        document.getElementById('deleteBtn').classList.add('hidden');
+        document.getElementById('eventModal').classList.remove('hidden');
+    }
+
+    function openAddModalWithDate() {
+        openAddModal();
+        document.getElementById('eventDateInput').value = selectedDate;
+        closeDayModal();
+    }
+
+    function openEditModal(event) {
+        document.getElementById('modalTitle').textContent = '일정 수정';
+        document.getElementById('eventId').value = event.id;
+        document.getElementById('eventTitleInput').value = event.title;
+        document.getElementById('eventDateInput').value = event.start_date;
+        document.getElementById('eventDescriptionInput').value = event.description || '';
+        document.getElementsByName('color').forEach(radio => {
+            if (radio.value === event.color) radio.checked = true;
+        });
+        document.getElementById('deleteBtn').classList.remove('hidden');
+        document.getElementById('eventModal').classList.remove('hidden');
+        closeDayModal();
+    }
+
+    function closeModal() {
+        document.getElementById('eventModal').classList.add('hidden');
+    }
+
+    function openDayModal(dateStr, dayEvents) {
+        selectedDate = dateStr;
+        document.getElementById('dayModalTitle').textContent = `${dateStr} 일정`;
+        const list = document.getElementById('dayEventsList');
+        list.innerHTML = '';
+
+        if (dayEvents.length === 0) {
+            list.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">등록된 일정이 없습니다.</div>';
+        } else {
+            dayEvents.forEach(event => {
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition cursor-pointer bg-white group`;
+                div.onclick = () => openEditModal(event);
+
+                // Format timestamps
+                const createdAt = new Date(event.created_at);
+                const updatedAt = new Date(event.updated_at);
+                const isModified = createdAt.getTime() !== updatedAt.getTime();
+
+                const formatTime = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    return `${year}-${month}-${day} ${hours}:${minutes}`;
+                };
+
+                const timeInfo = isModified
+                    ? `최종 수정: ${formatTime(updatedAt)}`
+                    : `등록: ${formatTime(createdAt)}`;
+
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-3 h-3 rounded-full bg-${event.color}-500"></div>
+                        <div class="flex-1">
+                            <div class="font-bold text-gray-800">${event.title}</div>
+                            <div class="text-xs text-gray-500 mt-1">${event.description || '내용 없음'}</div>
+                            <div class="text-xs text-gray-400 mt-1">${timeInfo}</div>
+                        </div>
+                        <svg class="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        document.getElementById('dayModal').classList.remove('hidden');
+    }
+
+    function closeDayModal() {
+        document.getElementById('dayModal').classList.add('hidden');
+    }
+
+    document.getElementById('eventForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = {
+            id: document.getElementById('eventId').value,
+            title: document.getElementById('eventTitleInput').value,
+            start_date: document.getElementById('eventDateInput').value,
+            description: document.getElementById('eventDescriptionInput').value,
+            color: document.querySelector('input[name="color"]:checked').value
+        };
+
+        const res = await fetch('/api/schedules/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+            closeModal();
+            fetchEvents();
+        }
+    };
+
+    async function deleteEvent() {
+        const id = document.getElementById('eventId').value;
+        if (!confirm('정말로 삭제하시겠습니까?')) return;
+
+        const res = await fetch('/api/schedules/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ id })
+        });
+
+        if (res.ok) {
+            closeModal();
+            fetchEvents();
+        }
+    }
+
+    // Initial load
+    fetchEvents();
+</script>
+{% endblock %}
