@@ -1,8 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
-from .models import Student, Schedule, Attendance
+from .models import Student, Schedule, Attendance, ConsultationLog
 from django.contrib import messages
 from datetime import datetime
+from datetime import date
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -133,8 +134,10 @@ def student_management(request):
 
     selected_student_id = request.GET.get('id')
     selected_student = None
+    consultations = None
     if selected_student_id:
         selected_student = get_object_or_404(Student, id=selected_student_id)
+        consultations = ConsultationLog.objects.filter(student=selected_student).order_by('-date', '-id')
 
     if request.method == 'POST':
         # Determine if creating or updating
@@ -172,8 +175,51 @@ def student_management(request):
         
         return redirect(f'/management/?id={student.id}')
 
+    # Render page for GET
     return render(request, 'academy/student_management_v2.html', {
         'students': students,
         'selected_student': selected_student,
+        'consultations': consultations,
         'query': query,
+        'today_date': datetime.now().strftime('%Y-%m-%d'),
+        'payment_days': list(range(1, 32)),
     })
+
+
+def consultation_save(request):
+    if request.method == 'POST':
+        student_id = request.POST.get('student_id')
+        consult_id = request.POST.get('consultation_id')
+        date_str = request.POST.get('date')
+        content = request.POST.get('content', '')[:1000]
+        author = request.POST.get('author', 'Admin')
+
+        student = get_object_or_404(Student, id=student_id)
+
+        if consult_id:
+            consult = get_object_or_404(ConsultationLog, id=consult_id, student=student)
+            consult.date = date_str or datetime.now().strftime('%Y-%m-%d')
+            consult.content = content
+            consult.author = author
+            consult.save()
+            messages.success(request, '상담기록이 수정되었습니다.')
+        else:
+            ConsultationLog.objects.create(
+                student=student,
+                date=date_str or datetime.now().strftime('%Y-%m-%d'),
+                content=content,
+                author=author
+            )
+            messages.success(request, '상담기록이 추가되었습니다.')
+
+        return redirect(f'/management/?id={student.id}')
+
+
+def consultation_delete(request):
+    if request.method == 'POST':
+        consult_id = request.POST.get('consultation_id')
+        student_id = request.POST.get('student_id')
+        consult = get_object_or_404(ConsultationLog, id=consult_id)
+        consult.delete()
+        messages.success(request, '상담기록이 삭제되었습니다.')
+        return redirect(f'/management/?id={student_id}')

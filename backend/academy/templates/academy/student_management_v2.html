@@ -219,10 +219,20 @@
                     <div class="space-y-1">
                         <label class="text-xs font-bold text-gray-400">납입일 (매월)</label>
                         <div class="relative">
-                            <input type="number" name="payment_day"
+                            <input type="text" name="payment_day" id="payment_day_input"
                                 value="{{ selected_student.payment_day|default:25 }}"
-                                class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                readonly
+                                class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
                             <span class="absolute right-3 top-2 text-sm text-gray-400">일</span>
+
+                            <!-- Popup -->
+                            <div id="payment_day_popup" class="hidden absolute z-50 left-0 mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg p-2">
+                                <div class="grid grid-cols-7 gap-1 text-xs">
+                                    {% for d in payment_days %}
+                                    <button type="button" onclick="selectPaymentDay({{ d }})" class="px-2 py-1 rounded-md bg-gray-100 hover:bg-indigo-100 text-gray-700">{{ d }}</button>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -248,34 +258,154 @@
                     <div class="space-y-1">
                         <label class="text-xs font-bold text-gray-400">등록일</label>
                         <input type="date" name="enrollment_date"
-                            value="{{ selected_student.enrollment_date|date:'Y-m-d'|default:'' }}"
+                            value="{{ selected_student.enrollment_date|date:'Y-m-d'|default:today_date }}"
                             class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                 </div>
             </div>
         </div>
 
+        <script>
+            const paymentPopup = () => document.getElementById('payment_day_popup');
+            const paymentInput = () => document.getElementById('payment_day_input');
+
+            function selectPaymentDay(day) {
+                const input = paymentInput();
+                if (input) input.value = day;
+                const popup = paymentPopup();
+                if (popup) popup.classList.add('hidden');
+            }
+
+            function togglePaymentPopup(e) {
+                const popup = paymentPopup();
+                if (!popup) return;
+                popup.classList.toggle('hidden');
+            }
+
+            // open popup when input clicked
+            document.addEventListener('DOMContentLoaded', function () {
+                const input = paymentInput();
+                if (input) {
+                    input.addEventListener('click', togglePaymentPopup);
+                }
+
+                // click outside to close
+                document.addEventListener('click', function (ev) {
+                    const popupEl = paymentPopup();
+                    const inputEl = paymentInput();
+                    if (!popupEl || !inputEl) return;
+                    if (popupEl.classList.contains('hidden')) return;
+                    if (ev.target === inputEl || popupEl.contains(ev.target)) return;
+                    popupEl.classList.add('hidden');
+                });
+            });
+        </script>
+
+        <script>
+            function editConsultation(id, date, content) {
+                const idEl = document.getElementById('consultation_id');
+                const dateEl = document.getElementById('consultation_date');
+                const contentEl = document.getElementById('consultation_content');
+                if (idEl) idEl.value = id;
+                if (dateEl) dateEl.value = date;
+                if (contentEl) contentEl.value = content;
+                updateConsultationCount();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function clearConsultationForm() {
+                const idEl = document.getElementById('consultation_id');
+                const dateEl = document.getElementById('consultation_date');
+                const contentEl = document.getElementById('consultation_content');
+                if (idEl) idEl.value = '';
+                if (dateEl) dateEl.value = '{{ today_date }}';
+                if (contentEl) contentEl.value = '';
+                updateConsultationCount();
+            }
+
+            function updateConsultationCount() {
+                const contentEl = document.getElementById('consultation_content');
+                const countEl = document.getElementById('consultation_count');
+                if (contentEl && countEl) countEl.innerText = contentEl.value.length;
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const contentEl = document.getElementById('consultation_content');
+                if (contentEl) {
+                    contentEl.addEventListener('input', updateConsultationCount);
+                    updateConsultationCount();
+                }
+            });
+        </script>
+
         <!-- Bottom Widgets -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-            <!-- Memo Widget -->
+            <!-- Memo / Consultation Widget -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                 <h4 class="font-bold text-gray-800 mb-4 flex items-center justify-between">
                     상담/특이사항 메모
                     <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">최근 3건</span>
                 </h4>
+
+                {% if selected_student %}
+                <div class="mb-4">
+                    <form method="POST" action="{% url 'consultation_save' %}" id="consultation_form">
+                        {% csrf_token %}
+                        <input type="hidden" name="student_id" value="{{ selected_student.id }}">
+                        <input type="hidden" name="consultation_id" id="consultation_id" value="">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                            <div>
+                                <label class="text-xs font-bold text-gray-400">상담일</label>
+                                <input type="date" name="date" id="consultation_date" value="{{ today_date }}" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-400">작성자</label>
+                                <input type="text" name="author" id="consultation_author" value="Admin" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="text-xs font-bold text-gray-400">상담내용 (최대 1000자)</label>
+                            <textarea name="content" id="consultation_content" maxlength="1000" rows="4" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder="상담 내용을 입력하세요 (최대 1000자)"></textarea>
+                            <div class="text-right text-xs text-gray-400 mt-1"><span id="consultation_count">0</span>/1000</div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">저장</button>
+                            <button type="button" onclick="clearConsultationForm()" class="bg-gray-100 px-4 py-2 rounded-lg text-sm">초기화</button>
+                        </div>
+                    </form>
+                </div>
+
                 <div class="space-y-3">
-                    {% if selected_student and selected_student.consultations.all %}
-                    {% for log in selected_student.consultations.all|slice:":3" %}
-                    <div class="flex gap-3 items-start p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                        <div class="text-xs font-bold text-indigo-600 mt-0.5 whitespace-nowrap">{{ log.date|date:"m/d"
-                            }}</div>
-                        <p class="text-sm text-gray-700 leading-relaxed">{{ log.content }}</p>
+                    {% if consultations %}
+                    {% for log in consultations|slice:":3" %}
+                    <div class="p-3 rounded-xl border border-gray-100">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex gap-3 items-start">
+                                <div class="text-xs font-bold text-indigo-600 mt-0.5 whitespace-nowrap">{{ log.date|date:"Y-m-d" }}</div>
+                                <div class="text-sm text-gray-700 leading-relaxed">{{ log.content }}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="editConsultation({{ log.id }}, '{{ log.date }}', '{{ log.content|escapejs }}')" class="text-sm text-indigo-600">수정</button>
+                                <form method="POST" action="{% url 'consultation_delete' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="consultation_id" value="{{ log.id }}">
+                                    <input type="hidden" name="student_id" value="{{ selected_student.id }}">
+                                    <button type="submit" class="text-sm text-red-600">삭제</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                     {% endfor %}
                     {% else %}
                     <div class="text-center py-8 text-gray-400 text-sm">등록된 상담 일지가 없습니다.</div>
                     {% endif %}
                 </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-400 text-sm">학생을 선택하면 상담을 추가할 수 있습니다.</div>
+                {% endif %}
             </div>
 
             <!-- Calendar Widget -->

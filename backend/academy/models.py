@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.core.validators import MaxLengthValidator
 import os
 
 class Student(models.Model):
@@ -78,7 +79,7 @@ class ConsultationLog(models.Model):
     # Specific to student
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='consultations')
     date = models.DateField(default=timezone.now)
-    content = models.TextField()
+    content = models.TextField(validators=[MaxLengthValidator(1000)])
     author = models.CharField(max_length=50, default='Admin')
 
 class Homework(models.Model):
